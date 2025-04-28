@@ -1,9 +1,8 @@
-# utils/logging.py
 import logging
 import sys
-from pythonjsonlogger import jsonlogger  # pip install python-json-logger
 import os
 from logging.handlers import RotatingFileHandler
+from pythonjsonlogger import jsonlogger
 
 def setup_logger(name="project", level="INFO") -> logging.Logger:
     logger = logging.getLogger(name)
@@ -11,19 +10,25 @@ def setup_logger(name="project", level="INFO") -> logging.Logger:
         return logger
 
     logger.setLevel(level)
+    os.makedirs("logs", exist_ok=True)
 
-    # 콘솔 출력 핸들러 (stdout)
+    # ✅ 콘솔 핸들러 (전체 로그)
     stream_handler = logging.StreamHandler(sys.stdout)
-    stream_formatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
-    stream_handler.setFormatter(stream_formatter)
+    stream_handler.setFormatter(jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s'))
     logger.addHandler(stream_handler)
 
-    # 🔽 파일 저장 핸들러 (회전형)
-    os.makedirs("logs", exist_ok=True)
-    file_handler = RotatingFileHandler("logs/project.log", maxBytes=1_000_000, backupCount=5)
-    file_formatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
-    file_handler.setFormatter(file_formatter)
-    logger.addHandler(file_handler)
+    # ✅ 성공 로그 핸들러 (INFO만 기록)
+    info_handler = RotatingFileHandler("logs/success.log", maxBytes=1_000_000, backupCount=5)
+    info_handler.setLevel(logging.INFO)
+    info_handler.addFilter(lambda record: record.levelno == logging.INFO)  # INFO만 필터링
+    info_handler.setFormatter(jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s'))
+    logger.addHandler(info_handler)
+
+    # ✅ 실패/경고 로그 핸들러 (WARNING 이상 기록)
+    error_handler = RotatingFileHandler("logs/error.log", maxBytes=1_000_000, backupCount=5)
+    error_handler.setLevel(logging.WARNING)  # WARNING, ERROR, CRITICAL 포함
+    error_handler.setFormatter(jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s'))
+    logger.addHandler(error_handler)
 
     return logger
 
